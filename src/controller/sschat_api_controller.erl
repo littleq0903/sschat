@@ -3,12 +3,8 @@
 
 -record(auth_info, {apikey}).
 
-get_uuid_id(apikey) ->
-    "apikey_" ++ get_uuid_id();
-get_uuid_id(room) ->
-    "room_" ++ get_uuid_id();
-get_uuid_id(user) ->
-    "user_" ++ get_uuid_id().
+get_uuid_id(Prefix) ->
+    atom_to_list(Prefix) ++ "_" ++ get_uuid_id().
 get_uuid_id() ->
     re:replace(uuid:to_string(uuid:uuid4()), "-", "", [global, {return, list}]).
 
@@ -28,6 +24,9 @@ bossdb_auth_count(Apikey, Type, Conditions, Options) ->
     NewConditions = get_auth_conditions(Conditions, Apikey),
     boss_db:count(Type, NewConditions, Options).
         
+bossdb_auth_delete(Apikey, Type, Conditions, Options) ->
+    ToBeDeleted = bossdb_auth_find(Apikey, Type, Conditions, Options),
+    array:map(fun(Object) -> boss_db:delete(Object:id()) end, ToBeDeleted).
 
 check_apikey(ApikeyFromReq) ->
     Count = boss_db:count(apikey, [api_key, 'equals', ApikeyFromReq]),
@@ -37,20 +36,21 @@ check_apikey(ApikeyFromReq) ->
     end.
 
 % pre-processing
-
+before_(Route) when Route == "register" ->
+    {ok, []};
 before_(_) ->
+    io:format("Checking authorization...~n"),
     Apikey = Req:query_param("apikey"),
     case check_apikey(Apikey) of
         true ->
             AuthInfo = #auth_info{apikey=Apikey},
             {ok, AuthInfo};
-        _ -> {redirect, "/api/permission_denied"}
+        _ ->
+            io:format("redirect to permission denied page..."),
+            {redirect, "/404"}
     end.
 
-permission_denied('GET', []) ->
-    ok.
-
-% register apis
+% register apis (public, no need to be authorized)
 register('GET', [ApiKey]) ->
     %% API to fetch the information of an api key.
     %% REQUIRE ARGUMENTS:
@@ -58,7 +58,7 @@ register('GET', [ApiKey]) ->
     Count = boss_db:count(apikey, [api_key, 'equals', ApiKey]),
     case Count of
         0 -> {json, [{status, "not_found"}]};
-        Otherwise -> {json, [
+        _ -> {json, [
                     {status, "ok"},
                     {api_key, ApiKey}
                     ]}
@@ -72,7 +72,7 @@ register('POST', []) ->
     io:format("Generated a api key: ~p, storing to database...~n", [New_API_key]),
     New_Application = apikey:new(id, New_API_key), 
     case New_Application:save() of
-        {ok, SavedBossRecord} -> {json, [
+        {ok, _} -> {json, [
                     {status, "ok"},
                     {api_key, New_API_key}
                     ]};
@@ -102,12 +102,11 @@ register('DELETE', [ApiKey]) ->
     end.
 
 
+% APIs need to be authorized wuth url parameter "apikey"
 % rooms apis
 room('GET', [RoomId], AuthInfo) ->
     #auth_info{apikey=Apikey} = AuthInfo,
-    Room = boss_db:find_first(room, [
-                {room_uuid, 'equalsf', RoomId},
-                {api_key, 'equals', Apikey}]),
+    Room = bossdb_auth_find_first(Apikey, room, [{room_uuid, 'equals', RoomId}], []),
     case Room of
         undefined ->
             { json, [
@@ -118,7 +117,7 @@ room('GET', [RoomId], AuthInfo) ->
             { json, [
                     {status, "ok"},
                     {data, [
-                            {members, mochijson2:encode(["a", "b"])},
+                            {members, "aaa"},
                             {room_uuid, RoomRecord:room_uuid()}
                             ]}
                     ] }
@@ -127,10 +126,11 @@ room('POST', [], AuthInfo) ->
     #auth_info{apikey=Apikey} = AuthInfo,
     RoomId = get_uuid_id(room),
     io:format("Received request to create a room, assigned room id: ~p~n", [RoomId]),
-    Room = room:new(id, RoomId, ApiKey),
+    Room = room:new(id, RoomId, Apikey),
     case Room:save() of
-        {ok, SavedBossRecord} -> {json, [
-                    {status, "ok"}
+        {ok, _} -> {json, [
+                    {status, "ok"},
+                    {room_id, RoomId}
                     ]};
         {error, Msgs} -> {json, [
                     {status, "error"},
@@ -138,33 +138,54 @@ room('POST', [], AuthInfo) ->
                     ]}
     end;
 room('DELETE', [RoomId], AuthInfo) ->
-    Apikey = Req:post_param("apikey"),
-    case check_apikey(Apikey) of
-        false -> {unauthorized, "api key not found."};
-        true -> {output, "not implemented yet."}
+    #auth_info{apikey=Apikey} = AuthInfo,
+    io:format("Received request to delete a room: ~p, deleting...", [RoomId]),
+    ExecutiveResult = bossdb_auth_delete(Apikey, room, [{room_uuid, 'equals', RoomId}], []),
+    
+    case length(ExecutiveResult) of
+        0 ->
+            {json, [
+                {status, "no_deleted"}
+                    ]};
+        Number ->
+            {json, [
+                {status, "ok"},
+                {deleted_num, Number}
+                    ]}
     end;
-room('PUT', [RoomId], AuthInfo) ->
-    Apikey = Req:post_param("apikey"),
-    case check_apikey(Apikey) of
-        false -> {unauthorized, "api key not found."};
-        true -> {output, "not implemented yet."}
-    end.
+
+room('PUT', [RoomId, UserId, Action], AuthInfo) ->
+    io:format("room: ~p; user: ~p~n", [RoomId, UserId]),
+    {json, [
+            {status, "ok"},
+            {action, Action},
+            {user, UserId},
+            {room, RoomId}
+            ]}.
 
 
 % users apis
-user('GET', []) ->
+user('GET', [], AuthInfo) ->
     Apikey = Req:query_param("apikey"),
     case check_apikey(Apikey) of
         false -> {unauthorized, "api key not found."};
         true -> {output, "not implemented yet."}
     end;
-user('POST', []) ->
-    Apikey = Req:post_param("apikey"),
-    case check_apikey(Apikey) of
-        false -> {unauthorized, "api key not found."};
-        true -> {output, "not implemented yet."}
+user('POST', [], AuthInfo) ->
+    #auth_info{apikey=Apikey} = AuthInfo,
+    UserId = get_uuid_id(user),
+    io:format("generate user id: ~p, creating user instance~n", [UserId]),
+    NewUser = users:new(id, UserId, Apikey),
+    case NewUser:save() of
+        {ok, _UserRecord} -> {json, [
+                    {status, "ok"},
+                    {user_id, NewUser:user_uuid()}
+                    ]};
+        {error, Msgs} -> {json, [
+                    {status, "error"}
+                    ]}
     end;
-user('DELETE', []) ->
+user('DELETE', [], AuthInfo) ->
     Apikey = Req:post_param("apikey"),
     case check_apikey(Apikey) of
         false -> {unauthorized, "api key not found."};
