@@ -1,7 +1,5 @@
 -module(room,
-        [Id, RoomUuid, OwnerApiKey]
+        [Id, RoomUuid :: string(), OwnerApiKey]
        ).
 -compile(export_all).
 
-before_create() ->
-    ok.

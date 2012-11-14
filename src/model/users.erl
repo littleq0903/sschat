@@ -1,4 +1,4 @@
 -module(users,
-        [Id, UserUuid :: string(), ApiKey]
+        [Id, UserUuid :: string(), OwnerApiKey]
        ).
 -compile(export_all).

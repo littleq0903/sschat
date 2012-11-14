@@ -3,6 +3,7 @@
 
 -record(auth_info, {apikey}).
 
+% DB-related functions
 get_uuid_id(Prefix) ->
     atom_to_list(Prefix) ++ "_" ++ get_uuid_id().
 get_uuid_id() ->
@@ -104,8 +105,8 @@ register('DELETE', [ApiKey]) ->
 
 % APIs need to be authorized wuth url parameter "apikey"
 % rooms apis
-room('GET', [RoomId], AuthInfo) ->
-    #auth_info{apikey=Apikey} = AuthInfo,
+room('GET', [RoomId], _AuthInfo) ->
+    #auth_info{apikey=Apikey} = _AuthInfo,
     Room = bossdb_auth_find_first(Apikey, room, [{room_uuid, 'equals', RoomId}], []),
     case Room of
         undefined ->
@@ -117,13 +118,13 @@ room('GET', [RoomId], AuthInfo) ->
             { json, [
                     {status, "ok"},
                     {data, [
-                            {members, "aaa"},
+                            %{members_count, bossdb_auth_count(Apikey, subscription, [{room_uuid, 'equals', RoomId}], [])},
                             {room_uuid, RoomRecord:room_uuid()}
                             ]}
                     ] }
     end;
-room('POST', [], AuthInfo) ->
-    #auth_info{apikey=Apikey} = AuthInfo,
+room('POST', [], _AuthInfo) ->
+    #auth_info{apikey=Apikey} = _AuthInfo,
     RoomId = get_uuid_id(room),
     io:format("Received request to create a room, assigned room id: ~p~n", [RoomId]),
     Room = room:new(id, RoomId, Apikey),
@@ -137,8 +138,8 @@ room('POST', [], AuthInfo) ->
                     {msg, lists:nth(1, Msgs)}
                     ]}
     end;
-room('DELETE', [RoomId], AuthInfo) ->
-    #auth_info{apikey=Apikey} = AuthInfo,
+room('DELETE', [RoomId], _AuthInfo) ->
+    #auth_info{apikey=Apikey} = _AuthInfo,
     io:format("Received request to delete a room: ~p, deleting...", [RoomId]),
     ExecutiveResult = bossdb_auth_delete(Apikey, room, [{room_uuid, 'equals', RoomId}], []),
     
@@ -154,25 +155,41 @@ room('DELETE', [RoomId], AuthInfo) ->
                     ]}
     end;
 
-room('PUT', [RoomId, UserId, Action], AuthInfo) ->
+room('PUT', [RoomId, UserId, Action], _AuthInfo) ->
+    #auth_info{apikey=Apikey} = _AuthInfo,
     io:format("room: ~p; user: ~p~n", [RoomId, UserId]),
+    {Status, Message} = case Action of
+        "add" ->
+            Subscription = subscription:new(id, RoomId, UserId, Apikey),
+            case Subscription:save() of
+                {ok, _Record} -> {"ok", "Subscribing succeed."};
+                {error, Msgs} -> {"error", lists:nth(1,Msgs)}
+            end;
+        "remove" ->
+            ActionResult = bossdb_auth_delete(Apikey, subscription, [{room_uuid, 'equals', RoomId}, {user_uuid, 'equals', UserId}], []),
+            case ActionResult of
+                ok -> {"ok", "Desubscribing succeed."};
+                {error, Msg} -> {"error", Msg}
+            end
+    end,
     {json, [
-            {status, "ok"},
+            {status, Status},
             {action, Action},
             {user, UserId},
-            {room, RoomId}
-            ]}.
+            {room, RoomId},
+            {msg, Message}
+    ]}.
 
 
 % users apis
-user('GET', [], AuthInfo) ->
+user('GET', [], _AuthInfo) ->
     Apikey = Req:query_param("apikey"),
     case check_apikey(Apikey) of
         false -> {unauthorized, "api key not found."};
         true -> {output, "not implemented yet."}
     end;
-user('POST', [], AuthInfo) ->
-    #auth_info{apikey=Apikey} = AuthInfo,
+user('POST', [], _AuthInfo) ->
+    #auth_info{apikey=Apikey} = _AuthInfo,
     UserId = get_uuid_id(user),
     io:format("generate user id: ~p, creating user instance~n", [UserId]),
     NewUser = users:new(id, UserId, Apikey),
@@ -182,10 +199,11 @@ user('POST', [], AuthInfo) ->
                     {user_id, NewUser:user_uuid()}
                     ]};
         {error, Msgs} -> {json, [
-                    {status, "error"}
+                    {status, "error"},
+                    {msg, lists:nth(1, Msgs)}
                     ]}
     end;
-user('DELETE', [], AuthInfo) ->
+user('DELETE', [], _AuthInfo) ->
     Apikey = Req:post_param("apikey"),
     case check_apikey(Apikey) of
         false -> {unauthorized, "api key not found."};
