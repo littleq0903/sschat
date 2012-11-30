@@ -107,7 +107,8 @@ register('DELETE', [ApiKey]) ->
 % rooms apis
 room('GET', [RoomId], _AuthInfo) ->
     #auth_info{apikey=Apikey} = _AuthInfo,
-    Room = bossdb_auth_find_first(Apikey, room, [{room_uuid, 'equals', RoomId}], []),
+    Rooms = bossdb_auth_find(Apikey, rooms, [{rooms_uuid, 'equals', RoomId}], []),
+    Room = lists:nth(1, Rooms),
     case Room of
         undefined ->
             { json, [
@@ -118,8 +119,8 @@ room('GET', [RoomId], _AuthInfo) ->
             { json, [
                     {status, "ok"},
                     {data, [
-                            %{members_count, bossdb_auth_count(Apikey, subscription, [{room_uuid, 'equals', RoomId}], [])},
-                            {room_uuid, RoomRecord:room_uuid()}
+                            %{members_count, bossdb_auth_count(Apikey, subscription, [{rooms_uuid, 'equals', RoomId}], [])},
+                            {rooms_uuid, RoomRecord:rooms_uuid()}
                             ]}
                     ] }
     end;
@@ -127,7 +128,7 @@ room('POST', [], _AuthInfo) ->
     #auth_info{apikey=Apikey} = _AuthInfo,
     RoomId = get_uuid_id(room),
     io:format("Received request to create a room, assigned room id: ~p~n", [RoomId]),
-    Room = room:new(id, RoomId, Apikey),
+    Room = rooms:new(id, RoomId, Apikey),
     case Room:save() of
         {ok, _} -> {json, [
                     {status, "ok"},
@@ -141,7 +142,7 @@ room('POST', [], _AuthInfo) ->
 room('DELETE', [RoomId], _AuthInfo) ->
     #auth_info{apikey=Apikey} = _AuthInfo,
     io:format("Received request to delete a room: ~p, deleting...", [RoomId]),
-    ExecutiveResult = bossdb_auth_delete(Apikey, room, [{room_uuid, 'equals', RoomId}], []),
+    ExecutiveResult = bossdb_auth_delete(Apikey, rooms, [{rooms_uuid, 'equals', RoomId}], []),
     
     case length(ExecutiveResult) of
         0 ->
@@ -166,7 +167,7 @@ room('PUT', [RoomId, UserId, Action], _AuthInfo) ->
                 {error, Msgs} -> {"error", lists:nth(1,Msgs)}
             end;
         "remove" ->
-            ActionResult = bossdb_auth_delete(Apikey, subscription, [{room_uuid, 'equals', RoomId}, {user_uuid, 'equals', UserId}], []),
+            ActionResult = bossdb_auth_delete(Apikey, subscription, [{rooms_uuid, 'equals', RoomId}, {user_uuid, 'equals', UserId}], []),
             case ActionResult of
                 ok -> {"ok", "Desubscribing succeed."};
                 {error, Msg} -> {"error", Msg}
