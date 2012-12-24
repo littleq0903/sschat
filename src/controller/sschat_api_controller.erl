@@ -116,11 +116,14 @@ room('GET', [RoomId], _AuthInfo) ->
                     {msg, "not_found"}
                     ] };
         RoomRecord -> 
+            SubscriptionRecords = boss_db:find(subscription, [{'room_uuid', 'equals', RoomId}]),
+            Subscripters = lists:map(fun(X) -> list_to_binary(X:user_uuid()) end, SubscriptionRecords),
             { json, [
                     {status, "ok"},
                     {data, [
                             %{members_count, bossdb_auth_count(Apikey, subscription, [{rooms_uuid, 'equals', RoomId}], [])},
-                            {rooms_uuid, RoomRecord:rooms_uuid()}
+                            {rooms_uuid, RoomRecord:rooms_uuid()},
+                            {subscripters, Subscripters}
                             ]}
                     ] }
     end;
