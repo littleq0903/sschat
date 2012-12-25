@@ -47,7 +47,7 @@ Powered by ChicagoBoss ([Official Site](http://chicagoboss.org/))
     + `DELETE /api/user/{user_uuid}?apikey={api_key}`
 	
 
-*1: **Room** and **User** APIs must be called with the apikey parameter in its url.
+\*1: **Room** and **User** APIs must be called with the apikey parameter in its url.
 
 ##### WebSocket API
 - Polling API: the location for polling and pushing messages
