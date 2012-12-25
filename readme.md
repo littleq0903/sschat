@@ -40,7 +40,7 @@ Powered by ChicagoBoss ([Official Site](http://chicagoboss.org/))
         + `POST /api/room?apikey={api_key}`
         + `DELETE /api/room/<room_uuid>?apikey={api_key}`
         + `PUT /api/room/<room_uuid>/<user_uuid>/<room_action>?apikey={api_key}`
-    +User APIs: the api for managing rooms under your api key (*1)
+    + User APIs: the api for managing rooms under your api key (*1)
         + `GET /api/user/<user_uuid>?apikey={api_key}`
         + `POST /api/user?apikey={api_key}`
         + `DELETE /api/user/{user_uuid}?apikey={api_key}`
@@ -50,7 +50,7 @@ Powered by ChicagoBoss ([Official Site](http://chicagoboss.org/))
 
 - WebSocket API
     - Polling API: the location for polling and pushing messages
-        - WS /websocket/polling
+        - `WS /websocket/polling`
              - input data formats: JSON-encoded string
                  - Login arguments
                      + command: “login”
