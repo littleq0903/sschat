@@ -71,6 +71,12 @@ P.S. the data format may change in the future, if you have any suggestion just l
 
 ---
 
+##### Change DB Driver
+
+You can switch to any other CB-capatible db driver if you would, All SSChat's code where used DB accessing is all through boss_db.
+
+---
+
 **SSChat: the further goals**
 
 **New Return Data format:**
