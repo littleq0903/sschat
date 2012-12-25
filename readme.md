@@ -30,38 +30,39 @@ Powered by ChicagoBoss ([Official Site](http://chicagoboss.org/))
 
 ####API Spec
 
-- Web API
-    + Register APIs: the api for registering api keys  
-        + `GET /api/register/{api_key}`
-        + `POST /api/register`
-        + `DELETE /api/register/{api_key}`
-    + Room APIs: the api for managing rooms under your api key (*1)
-        + `GET /api/room/{room_uuid}?apikey={api_key}`
-        + `POST /api/room?apikey={api_key}`
-        + `DELETE /api/room/<room_uuid>?apikey={api_key}`
-        + `PUT /api/room/<room_uuid>/<user_uuid>/<room_action>?apikey={api_key}`
-    + User APIs: the api for managing rooms under your api key (*1)
-        + `GET /api/user/<user_uuid>?apikey={api_key}`
-        + `POST /api/user?apikey={api_key}`
-        + `DELETE /api/user/{user_uuid}?apikey={api_key}`
+#####Web API
+
+- Register APIs: the api for registering api keys  
+    + `GET /api/register/{api_key}`
+    + `POST /api/register`
+    + `DELETE /api/register/{api_key}`
+- Room APIs: the api for managing rooms under your api key (*1)
+    + `GET /api/room/{room_uuid}?apikey={api_key}`
+    + `POST /api/room?apikey={api_key}`
+    + `DELETE /api/room/<room_uuid>?apikey={api_key}`
+    + `PUT /api/room/<room_uuid>/<user_uuid>/<room_action>?apikey={api_key}`
+- User APIs: the api for managing rooms under your api key (*1)
+    + `GET /api/user/<user_uuid>?apikey={api_key}`
+    + `POST /api/user?apikey={api_key}`
+    + `DELETE /api/user/{user_uuid}?apikey={api_key}`
 	
 
-*1: Room and User APIs must be called with the apikey parameter in its url.
+***1:** Room and User APIs must be called with the apikey parameter in its url.
 
-- WebSocket API
-    - Polling API: the location for polling and pushing messages
-        - `WS /websocket/polling`
-             - input data formats: JSON-encoded string
-                 - Login arguments
-                     + command: “login”
-                     + user: {user_uuid}
-                 - Message arguments
-                     + command: “room”
-                     + room: {room_uuid}
-                     + msg: {message}
-             - output data format: plain text
-                 + {message}
-                 + [JavaScript example](https://github.com/littleq0903/sschat/blob/master/simulation/websocket/web/index.html) 
+##### WebSocket API
+- Polling API: the location for polling and pushing messages
+    - `WS /websocket/polling`
+         - input data formats: JSON-encoded string
+             - Login arguments
+                 + command: “login”
+                 + user: {user_uuid}
+             - Message arguments
+                 + command: “room”
+                 + room: {room_uuid}
+                 + msg: {message}
+         - output data format: plain text
+             + {message}
+             + [JavaScript example](https://github.com/littleq0903/sschat/blob/master/simulation/websocket/web/index.html) 
 (you can directly download and open this html file to test the behaviour of realtime actions.)
 
 Have fun!
