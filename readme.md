@@ -2,7 +2,7 @@
 
 ####Abstract
 
-SSChat is a Platform-as-a-Service service which is targeting on providing PubSub real-time service with container-like mechanism. SSChat could be scaled by opening more SSChat instances to provide more capability.
+SSChat is a Platform-as-a-Service service which is targeting on providing PubSub real-time service with container-liked mechanism. SSChat could be scaled by opening more SSChat instances to provide more capability.
 
 Each developer needs to register an api key on SSChat, with that api key, they can manage their users and rooms in their own isolated space, pushing and pulling real-time message according to how they scheduled users and rooms relationships.
 
@@ -47,7 +47,7 @@ Powered by ChicagoBoss ([Official Site](http://chicagoboss.org/))
     + `DELETE /api/user/{user_uuid}?apikey={api_key}`
 	
 
-***1:** Room and User APIs must be called with the apikey parameter in its url.
+*1: **Room** and **User** APIs must be called with the apikey parameter in its url.
 
 ##### WebSocket API
 - Polling API: the location for polling and pushing messages
