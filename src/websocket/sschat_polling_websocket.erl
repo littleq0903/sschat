@@ -12,17 +12,25 @@
 %
 
 % utils
-%
+get_json(message, Data, From, To) ->
+    [
+        {message, <<"Message">>},
+        {data, Data},
+        {from, From},
+        {to, To}
+    ].
 
-send_to_matched(Users, MatchedUsers, Msg) ->
-    io:format("msg: ~p~n", [Msg]),
+send_to_matched(Users, FromUser, ToRoomId, Msg) ->
+    Subscriptions = boss_db:find(subscription, [{'room_uuid', equals, ToRoomId}]),
+    MatchedUsers = lists:map(fun(X) -> X:user_uuid() end, Subscriptions),
     MatchedHandler = fun (K, V) ->
             io:format("K:~p, V:~p~n", [K, V]),
             IsMatch = lists:member(binary_to_list(V), MatchedUsers),
             io:format("IsMatch: ~p~n", [IsMatch]),
             if 
                 IsMatch -> 
-                    K ! {text, Msg},
+                    %io:format("DEBUG: ~p:~p:~p~n", [Msg, FromUser, ToRoomId]),
+                    K ! {text, jsx:encode(get_json(message, Msg, FromUser, ToRoomId ))},
                     true;
                 true -> false
             end
@@ -41,38 +49,40 @@ handle_join(ServiceName, WebSocketId, SessionId, State) ->
     %WebSocketId ! { text, MsgToResp },
     {reply, ok, State#state{users=dict:store(WebSocketId, SessionId, Users)}}.
 
-handle_close(_ServiceName, WebSocketId, _SessionId, State) ->
+handle_close(ServiceName, WebSocketId, SessionId, State) ->
     #state{users=Users} = State,
+    io:format("[WS:CLOSE](~p:~p:~p)~n", [ServiceName, WebSocketId, SessionId]),
     {reply, ok, State#state{users=dict:erase(WebSocketId, Users)}}.
 
 handle_incoming(_ServiceName, WebSocketId, SessionId, Message, State) ->
     %io:format("[WS:INCOMING] msg: ~p~n (~p:~p:~p)~n", [Message, _ServiceName, WebSocketId, SessionId]),
     %io:format("[WS:INCOMING] State: ~p~n", [State]),
     Accepted = jsx:is_json(Message),
-    if 
+    ResultState = if 
         Accepted -> 
             #state{users=Users} = State,
             ParsedMessage = jsx:decode(Message),
             Command = proplists:get_value(<<"command">>, ParsedMessage),
             case Command of
                 <<"room">> ->
+                    User_id = case dict:find(WebSocketId, Users) of
+                        {ok, Result} -> Result;
+                        {error, _} -> "error_id"
+                    end,
                     Room_id = proplists:get_value(<<"room">>, ParsedMessage),
                     MessageToSend = proplists:get_value(<<"msg">>, ParsedMessage),
 
-                    Ids = dict:erase(WebSocketId, State#state.users),
-                    Subscriptions = boss_db:find(subscription, [{'room_uuid', equals, Room_id}]),
-                    MatchedUser = lists:map(fun(X) -> X:user_uuid() end, Subscriptions),
-                    io:format("MatchedUser: ~p~n", [MatchedUser]),
-                    send_to_matched(dict:erase(WebSocketId, Users), MatchedUser, MessageToSend),
-                    CommandedState = State;
+                    Ids = dict:erase(WebSocketId, Users),
+                    send_to_matched(Ids, User_id, Room_id, MessageToSend),
+                    State;
                 <<"login">> ->
                     LoginUser = proplists:get_value(<<"user">>, ParsedMessage),
-                    CommandedState = State#state{users=dict:store(WebSocketId, LoginUser, Users)}
-            end,
-            {noreply, CommandedState#state{last_msg=Message}};
+                    State#state{users=dict:store(WebSocketId, LoginUser, Users)}
+            end;
         true ->
-            {noreply, State}
-    end.
+            State
+    end,
+    {noreply, ResultState}.
 
 handle_info(state, State) ->
 	error_logger:info_msg("state: ~p~n", [State]),
