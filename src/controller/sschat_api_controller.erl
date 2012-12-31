@@ -108,7 +108,10 @@ register('DELETE', [ApiKey]) ->
 room('GET', [RoomId], _AuthInfo) ->
     #auth_info{apikey=Apikey} = _AuthInfo,
     Rooms = bossdb_auth_find(Apikey, rooms, [{rooms_uuid, 'equals', RoomId}], []),
-    Room = lists:nth(1, Rooms),
+    Room = case length(Rooms) of
+        1 -> lists:nth(1, Rooms);
+        0 -> undefined
+    end,
     case Room of
         undefined ->
             { json, [
