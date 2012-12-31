@@ -190,11 +190,26 @@ room('PUT', [RoomId, UserId, Action], _AuthInfo) ->
 
 
 % users apis
-user('GET', [], _AuthInfo) ->
+user('GET', [UserId], _AuthInfo) ->
     #auth_info{apikey=Apikey} = _AuthInfo,
-    case check_apikey(Apikey) of
-        false -> {unauthorized, "api key not found."};
-        true -> {output, "not implemented yet."}
+    Users = bossdb_auth_find(Apikey, users, [{user_uuid, 'equals', UserId}], []),
+    User = case length(Users) of
+        1 -> lists:nth(1, Users);
+        0 -> undefined
+    end,
+    case User of
+        undefined -> 
+            { json, [
+                    {status, "error"},
+                    {msg, "not_found"}
+                    ] };
+        UserRecord ->
+            SubRecords = boss_db:find(subscription, [{'user_uuid', 'equals', UserId}]),
+            SubRooms = lists:map(fun(X) -> list_to_binary(X:room_uuid()) end, SubRecords),
+            {json, [
+                {user_uuid, UserId},
+                {sub_rooms, SubRooms}
+            ]}
     end;
 user('POST', [], _AuthInfo) ->
     #auth_info{apikey=Apikey} = _AuthInfo,
