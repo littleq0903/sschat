@@ -27,7 +27,7 @@ bossdb_auth_count(Apikey, Type, Conditions, Options) ->
         
 bossdb_auth_delete(Apikey, Type, Conditions, Options) ->
     ToBeDeleted = bossdb_auth_find(Apikey, Type, Conditions, Options),
-    array:map(fun(Object) -> boss_db:delete(Object:id()) end, ToBeDeleted).
+    lists:map(fun(Object) -> boss_db:delete(Object:id()) end, ToBeDeleted).
 
 check_apikey(ApikeyFromReq) ->
     Count = boss_db:count(apikey, [api_key, 'equals', ApikeyFromReq]),
@@ -143,6 +143,7 @@ room('POST', [], _AuthInfo) ->
                     ]}
     end;
 room('DELETE', [RoomId], _AuthInfo) ->
+    % TODO: delete related subcription after deleting.
     #auth_info{apikey=Apikey} = _AuthInfo,
     io:format("Received request to delete a room: ~p, deleting...", [RoomId]),
     ExecutiveResult = bossdb_auth_delete(Apikey, rooms, [{rooms_uuid, 'equals', RoomId}], []),
@@ -187,7 +188,7 @@ room('PUT', [RoomId, UserId, Action], _AuthInfo) ->
 
 % users apis
 user('GET', [], _AuthInfo) ->
-    Apikey = Req:query_param("apikey"),
+    #auth_info{apikey=Apikey} = _AuthInfo,
     case check_apikey(Apikey) of
         false -> {unauthorized, "api key not found."};
         true -> {output, "not implemented yet."}
@@ -208,6 +209,7 @@ user('POST', [], _AuthInfo) ->
                     ]}
     end;
 user('DELETE', [], _AuthInfo) ->
+    % TODO: delete related subscription after deleting users.
     Apikey = Req:post_param("apikey"),
     case check_apikey(Apikey) of
         false -> {unauthorized, "api key not found."};
