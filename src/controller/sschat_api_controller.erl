@@ -2,12 +2,7 @@
 -compile(export_all).
 
 -record(auth_info, {apikey}).
-
-% DB-related functions
-get_uuid_id(Prefix) ->
-    atom_to_list(Prefix) ++ "_" ++ get_uuid_id().
-get_uuid_id() ->
-    re:replace(uuid:to_string(uuid:uuid4()), "-", "", [global, {return, list}]).
+-import(msg_lib, [get_uuid_id/1]).
 
 get_auth_conditions(Conditions, Apikey) ->
     AuthConditions = [{owner_api_key, 'equals', Apikey}],

@@ -1,7 +1,7 @@
 -module(sschat_polling_websocket).
 -behaviour(boss_service_handler).
 
-
+-import(msg_lib, [get_json/4]).
 -compile(export_all).
 %-export([init/0, handle_join/4, handle_info/2, terminate/2]).
 
@@ -11,18 +11,13 @@
 % users: dict [{websocketid, user_id}]
 %
 
-% utils
-get_json(message, Data, From, To) ->
-    [
-        {message, <<"Message">>},
-        {data, Data},
-        {from, From},
-        {to, To}
-    ].
+
+get_room_subscription(RoomId) ->
+    Records = boss_db:find(subscription, [{'room_uuid', equals, RoomId}]),
+    lists:map(fun(X) -> X:user_uuid() end, Records).
 
 send_to_matched(Users, FromUser, ToRoomId, Msg) ->
-    Subscriptions = boss_db:find(subscription, [{'room_uuid', equals, ToRoomId}]),
-    MatchedUsers = lists:map(fun(X) -> X:user_uuid() end, Subscriptions),
+    MatchedUsers = get_room_subscription(ToRoomId),
     MatchedHandler = fun (K, V) ->
             io:format("K:~p, V:~p~n", [K, V]),
             IsMatch = lists:member(binary_to_list(V), MatchedUsers),
