@@ -42,7 +42,11 @@ handle_join(ServiceName, WebSocketId, SessionId, State) ->
     #state{users=Users} = State,
     io:format("[WS:JOIN](~p:~p:~p)~n", [ServiceName, WebSocketId, SessionId]),
     %WebSocketId ! { text, MsgToResp },
-    {reply, ok, State#state{users=dict:store(WebSocketId, SessionId, Users)}}.
+    FixedSessionId = case SessionId of
+        undefined -> <<"user_not_logon">>;
+        NotEmptySessionId -> SessionId
+    end,
+    {reply, ok, State#state{users=dict:store(WebSocketId, FixedSessionId, Users)}}.
 
 handle_close(ServiceName, WebSocketId, SessionId, State) ->
     #state{users=Users} = State,
