@@ -40,22 +40,22 @@ init() ->
 handle_join(ServiceName, WebSocketId, SessionId, State) ->
     MsgToResp = io_lib:format("ServiceName: ~p~nWebsocketId: ~p~nSessionId: ~p~n", [ServiceName, WebSocketId, SessionId]),
     #state{users=Users} = State,
-    io:format("[WS:JOIN](~p:~p:~p)~n", [ServiceName, WebSocketId, SessionId]),
     %WebSocketId ! { text, MsgToResp },
     FixedSessionId = case SessionId of
         undefined -> <<"user_not_logon">>;
         NotEmptySessionId -> SessionId
     end,
+    io:format("[WS:JOIN] (ServiceName: ~p, WebSocketId:~p, SessionId:~p)~n", [ServiceName, WebSocketId, FixedSessionId]),
     {reply, ok, State#state{users=dict:store(WebSocketId, FixedSessionId, Users)}}.
 
 handle_close(ServiceName, WebSocketId, SessionId, State) ->
     #state{users=Users} = State,
-    io:format("[WS:CLOSE](~p:~p:~p)~n", [ServiceName, WebSocketId, SessionId]),
+    io:format("[WS:CLOSE] (ServiceName: ~p, WebSocketId:~p, SessionId:~p)~n", [ServiceName, WebSocketId, SessionId]),
     {reply, ok, State#state{users=dict:erase(WebSocketId, Users)}}.
 
 handle_incoming(_ServiceName, WebSocketId, SessionId, Message, State) ->
-    %io:format("[WS:INCOMING] msg: ~p~n (~p:~p:~p)~n", [Message, _ServiceName, WebSocketId, SessionId]),
-    %io:format("[WS:INCOMING] State: ~p~n", [State]),
+    io:format("[WS:INCOMING] msg: ~p~n (~p:~p:~p)~n", [Message, _ServiceName, WebSocketId, SessionId]),
+    io:format("[WS:INCOMING] State: ~p~n", [State]),
     Accepted = jsx:is_json(Message),
     ResultState = if 
         Accepted -> 
@@ -74,6 +74,9 @@ handle_incoming(_ServiceName, WebSocketId, SessionId, Message, State) ->
                     Ids = dict:erase(WebSocketId, Users),
                     send_to_matched(Ids, User_id, Room_id, MessageToSend),
                     State;
+                <<"show-status">> ->
+                    io:format("~p~n", [State]),
+                    State;
                 <<"login">> ->
                     LoginUser = proplists:get_value(<<"user">>, ParsedMessage),
                     State#state{users=dict:store(WebSocketId, LoginUser, Users)}
@@ -81,6 +84,7 @@ handle_incoming(_ServiceName, WebSocketId, SessionId, Message, State) ->
         true ->
             State
     end,
+    io:format("[WS:INCOMING] ResultState: ~p~n", [ResultState]),
     {noreply, ResultState}.
 
 handle_info(state, State) ->
