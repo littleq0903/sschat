@@ -3,7 +3,7 @@
 
 -import(msg_lib, [get_json/4]).
 -compile(export_all).
-%-export([init/0, handle_join/4, handle_info/2, terminate/2]).
+-export([init/0, handle_join/4, handle_info/2, terminate/2]).
 
 -record(state, {user_ids, users, last_msg}).
 %
