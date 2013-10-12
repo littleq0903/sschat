@@ -37,7 +37,7 @@ init() ->
     {ok, #state{users=dict:new()}}.
 
 
-handle_join(ServiceName, WebSocketId, _Req, SessionId, State) ->
+handle_join(ServiceName, WebSocketId, SessionId, State) ->
     MsgToResp = io_lib:format("ServiceName: ~p~nWebsocketId: ~p~nSessionId: ~p~n", [ServiceName, WebSocketId, SessionId]),
     #state{users=Users} = State,
     %WebSocketId ! { text, MsgToResp },
@@ -48,12 +48,12 @@ handle_join(ServiceName, WebSocketId, _Req, SessionId, State) ->
     io:format("[WS:JOIN] (ServiceName: ~p, WebSocketId:~p, SessionId:~p)~n", [ServiceName, WebSocketId, FixedSessionId]),
     {reply, ok, State#state{users=dict:store(WebSocketId, FixedSessionId, Users)}}.
 
-handle_close(ServiceName, WebSocketId, _Req, SessionId, State) ->
+handle_close(ServiceName, WebSocketId, SessionId, State) ->
     #state{users=Users} = State,
     io:format("[WS:CLOSE] (ServiceName: ~p, WebSocketId:~p, SessionId:~p)~n", [ServiceName, WebSocketId, SessionId]),
     {reply, ok, State#state{users=dict:erase(WebSocketId, Users)}}.
 
-handle_incoming(_ServiceName, WebSocketId, _Req, SessionId, Message, State) ->
+handle_incoming(_ServiceName, WebSocketId, SessionId, Message, State) ->
     io:format("[WS:INCOMING] msg: ~p~n (~p:~p:~p)~n", [Message, _ServiceName, WebSocketId, SessionId]),
     io:format("[WS:INCOMING] State: ~p~n", [State]),
     Accepted = jsx:is_json(Message),
