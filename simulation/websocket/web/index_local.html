@@ -1,0 +1,119 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocket API Test</title>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.9.2/jquery-ui.min.js"></script>
+    <style type="text/css">
+        .chat_dialog {
+            width: 200px;
+        }
+    </style>
+    <script type="text/javascript">
+        server_host = "ws://localhost:8001/websocket/polling";
+        //server_host = "ws://localhost:8001/websocket/polling";
+        user1_ws = new WebSocket(server_host);
+        user2_ws = new WebSocket(server_host);
+
+        var login = function(user, ws) {
+            var data = {
+                "command": "login",
+                "user": user
+            };
+            console.log("[Login] " + JSON.stringify(data));
+            ws.send(JSON.stringify(data));
+        };
+
+        var send_msg = function(room, msg, ws) {
+            var data = {
+                "command": "room",
+                "room": room,
+                "msg": msg
+            };
+            ws.send(JSON.stringify(data));
+        };
+
+        var user1_onmsg = function(e){
+            var msg = e.data;
+            console.log("[user1_onmsg] " + msg);
+            $("#user1_dialog").append(new Option(msg, "none", true, true));
+            $("#user1_dialog").scrollTop(10000);
+        }
+        user1_ws.onmessage = user1_onmsg;
+        
+        var user2_onmsg = function(e){
+            var msg = e.data;
+            console.log("[user2_onmsg] " + msg);
+            $("#user2_dialog").append(new Option(msg, "none", true, true));
+            $("#user2_dialog").scrollTop(10000);
+        }
+        user2_ws.onmessage = user2_onmsg;
+
+        $(function(){
+            var room_id = "room_c0604125a8d142278b4132da314660e0";
+            var user1_id = "user_93fb86dd01514e12a9319a85da5d41df";
+            var user2_id = "user_8bbf3b6d8d3b4767abe1e5d8318cdf4f";
+
+            $("#room_id").attr('value', room_id);
+            $("#user1_id").attr('value', user1_id);
+            $("#user2_id").attr('value', user2_id);
+
+            $("#user1_login").click(function(){
+                login($("#user1_id").val(), user1_ws);    
+            });
+            $("#user2_login").click(function(){
+                login($("#user2_id").val(), user2_ws);    
+            });
+
+            $("#user1_send").click(function(){
+                var msg = "User1: " + $("#user1_msg").val();
+                var me_msg = "me: " + $("#user1_msg").val();
+                $("#user1_dialog").append(new Option(me_msg, "none", true, true));
+                var room_id = $("#room_id").val();
+                send_msg(room_id, msg, user1_ws);
+            });
+
+            $("#user2_send").click(function(){
+                var msg = "User2: " + $("#user2_msg").val();
+                var me_msg = "me: " + $("#user2_msg").val();
+                $("#user2_dialog").append(new Option(me_msg, "none", true, true));
+                var room_id = $("#room_id").val();
+                send_msg(room_id, msg, user2_ws);
+            });
+
+
+
+        });
+    </script>
+</head>
+<body>
+    <h1>WebSocket API Test</h1>
+
+    <h2>Room</h2>
+    <input type="text" id="room_id" placeholder="Room ID..."/>
+
+    <table>
+        <tr>
+            <td>
+                <h2>User1</h2>
+                <input id="user1_id" type="text" placeholder="Enter User ID..."/><button id="user1_login">Login</button>
+                <br />
+                <select id="user1_dialog" class="chat_dialog" name="" multiple="true" size=5></select>
+                <br>
+                <input type="text" id="user1_msg" placeholder="Message..."/><button id="user1_send">Send</button>
+            </td>
+            <td>
+                <h2>User2</h2>
+                <input id="user2_id" type="text" placeholder="Enter User ID..."/><button id="user2_login">Login</button>
+                <br />
+                <select id="user2_dialog" class="chat_dialog" name="" multiple="true" size=5></select>
+                <br>
+                <input type="text" id="user2_msg" placeholder="Message..."/><button id="user2_send">Send</button>
+            </td>
+        </tr>
+    </table>
+
+    
+</body>
+</html>
